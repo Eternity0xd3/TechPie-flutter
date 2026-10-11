@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:techpie/services/auth_service.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -42,6 +44,7 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   String _appVersion = '';
   bool _checkingUpdate = false;
+  bool? _isPersonalInfoBlurred;
 
   /// The stack a settings subpage is pushed onto in a wide window. A field, not
   /// a local: a GlobalKey rebuilt every frame would drop the stack with it.
@@ -51,6 +54,20 @@ class _SettingsPageState extends State<SettingsPage> {
   void initState() {
     super.initState();
     unawaited(_loadAppVersion());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _isPersonalInfoBlurred ??=
+        ServiceProvider.of(context).storageService.maskPersonalInfo;
+  }
+
+  void _togglePersonalInfoBlur() {
+    unawaited(HapticFeedback.lightImpact());
+    setState(() {
+      _isPersonalInfoBlurred = !(_isPersonalInfoBlurred ?? true);
+    });
   }
 
   Future<void> _loadAppVersion() async {
@@ -171,29 +188,73 @@ class _SettingsPageState extends State<SettingsPage> {
           tpAuth,
           campusCard,
         ]),
-        builder: (context, _) => ListView(
-          padding: EdgeInsets.only(
-            top: topInset,
-            bottom: AppShellMetrics.bottomContentPaddingOf(context),
-          ),
-          children: [
-            // Account section
-            _sectionHeader(theme, 'Account'),
-            if (auth.isLoggedIn) ...[
-              ListTile(
-                leading: const Icon(Icons.person),
-                title: Text(
-                  auth.session!.userName.isNotEmpty
-                      ? auth.session!.userName
-                      : auth.session!.userId,
+        builder: (context, _) {
+          final session = auth.session;
+          return ListView(
+            padding: EdgeInsets.only(
+              top: topInset,
+              bottom: AppShellMetrics.bottomContentPaddingOf(context),
+            ),
+            children: [
+              // Account section
+              _sectionHeader(theme, 'Account'),
+              if (session != null) ...[
+              TweenAnimationBuilder<double>(
+                tween: Tween<double>(
+                  begin: (_isPersonalInfoBlurred ?? true) ? 8.0 : 0.0,
+                  end: (_isPersonalInfoBlurred ?? true) ? 8.0 : 0.0,
                 ),
-                subtitle: Text(
-                  [
-                    'GeekPie Uni-Auth',
-                    if (auth.session!.userId.isNotEmpty) auth.session!.userId,
-                  ].join(' · '),
-                ),
+                duration: const Duration(milliseconds: 50),
+                builder: (context, blurSigma, _) {
+                  Widget wrapBlur(Widget child) {
+                    if (blurSigma <= 0.01) return child;
+                    return ImageFiltered(
+                      imageFilter: ImageFilter.blur(
+                        sigmaX: blurSigma,
+                        sigmaY: blurSigma,
+                      ),
+                      child: child,
+                    );
+                  }
+
+                  final isBlurred = _isPersonalInfoBlurred ?? true;
+                  return Semantics(
+                    button: true,
+                    label: isBlurred ? '个人信息已隐藏，点击显示' : '个人信息已显示，点击隐藏',
+                    child: ListTile(
+                      leading: wrapBlur(const Icon(Icons.person)),
+                      title: wrapBlur(
+                        Text(
+                          session.userName.isNotEmpty
+                              ? session.userName
+                              : session.userId,
+                        ),
+                      ),
+                      subtitle: wrapBlur(
+                        Text(
+                          [
+                            'GeekPie Uni-Auth',
+                            if (session.userId.isNotEmpty)
+                              session.userId,
+                          ].join(' · '),
+                        ),
+                      ),
+                      trailing: IconButton(
+                        icon: Icon(
+                          isBlurred
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                        ),
+                        tooltip: isBlurred ? '显示个人信息' : '隐藏个人信息',
+                        onPressed: _togglePersonalInfoBlur,
+                      ),
+                      onTap: _togglePersonalInfoBlur,
+                    ),
+                  );
+                },
               ),
+            ],
+            if (auth.isLoggedIn) ...[
               ListTile(
                 leading: const Icon(Icons.cloud_sync_outlined),
                 title: const Text('Cloud sync'),
@@ -344,6 +405,19 @@ class _SettingsPageState extends State<SettingsPage> {
 
             // General section
             _sectionHeader(theme, 'General'),
+            _AdaptiveSwitchTile(
+              usesIosLiquidGlass: useIosChrome,
+              secondary: const Icon(Icons.visibility_off_outlined),
+              title: '默认隐藏个人信息',
+              subtitle: '进入设置页时自动模糊个人信息，防止截图泄露',
+              value: storage.maskPersonalInfo,
+              onChanged: (value) {
+                unawaited(storage.setMaskPersonalInfo(value));
+                setState(() {
+                  _isPersonalInfoBlurred = value;
+                });
+              },
+            ),
             ListTile(
               leading: const Icon(Icons.info_outline),
               title: const Text('About'),
@@ -432,9 +506,10 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ),
           ],
-        ),
-      ),
-    );
+        );
+      },
+    ),
+  );
   }
 
   Future<void> _confirmLogout(AuthService auth) async {
