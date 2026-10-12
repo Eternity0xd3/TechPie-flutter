@@ -214,7 +214,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 onTap: () => unawaited(
                   launchUrl(
                     Uri.parse(
-                        'https://techpie.geekpie.club/privacy#account-deletion'),
+                        'https://techpie.geekpie.club/privacy#account-deletion',),
                     mode: LaunchMode.externalApplication,
                   ),
                 ),
@@ -297,7 +297,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => unawaited(
                   pushAdaptivePage<void>(context,
-                      builder: (_) => const WatchSettingsPage()),
+                      builder: (_) => const WatchSettingsPage(),),
                 ),
               ),
 
