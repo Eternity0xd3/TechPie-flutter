@@ -170,6 +170,7 @@ class _SettingsPageState extends State<SettingsPage> {
           themeService,
           tpAuth,
           campusCard,
+          sp.syncService,
         ]),
         builder: (context, _) => ListView(
           padding: EdgeInsets.only(
@@ -212,7 +213,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 trailing: const Icon(Icons.open_in_new),
                 onTap: () => unawaited(
                   launchUrl(
-                    Uri.parse('https://techpie.geekpie.club/privacy#account-deletion'),
+                    Uri.parse(
+                        'https://techpie.geekpie.club/privacy#account-deletion'),
                     mode: LaunchMode.externalApplication,
                   ),
                 ),
@@ -294,7 +296,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 title: const Text('Apple Watch'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => unawaited(
-                  pushAdaptivePage<void>(context, builder: (_) => const WatchSettingsPage()),
+                  pushAdaptivePage<void>(context,
+                      builder: (_) => const WatchSettingsPage()),
                 ),
               ),
 
@@ -369,30 +372,32 @@ class _SettingsPageState extends State<SettingsPage> {
 
             // Developer section
             if (!kReleaseMode) _sectionHeader(theme, 'Developer'),
-            if (!kReleaseMode) _AdaptiveSwitchTile(
-              usesIosLiquidGlass: useIosChrome,
-              secondary: const Icon(Icons.bug_report_outlined),
-              title: 'Debug mode',
-              subtitle: 'Log all API requests',
-              value: logger.enabled,
-              onChanged: (value) {
-                logger.enabled = value;
-                unawaited(storage.setDebugMode(value));
-              },
-            ),
-            if (!kReleaseMode) _AdaptiveSwitchTile(
-              usesIosLiquidGlass: useIosChrome,
-              secondary: const Icon(Icons.dns_outlined),
-              title: 'Use localhost',
-              subtitle: isAndroid()
-                  ? 'Connect to local server via 10.0.2.2:3000'
-                  : 'Connect to local development server',
-              value: storage.useLocalhost,
-              onChanged: (value) {
-                unawaited(storage.setUseLocalhost(value));
-                setState(() {});
-              },
-            ),
+            if (!kReleaseMode)
+              _AdaptiveSwitchTile(
+                usesIosLiquidGlass: useIosChrome,
+                secondary: const Icon(Icons.bug_report_outlined),
+                title: 'Debug mode',
+                subtitle: 'Log all API requests',
+                value: logger.enabled,
+                onChanged: (value) {
+                  logger.enabled = value;
+                  unawaited(storage.setDebugMode(value));
+                },
+              ),
+            if (!kReleaseMode)
+              _AdaptiveSwitchTile(
+                usesIosLiquidGlass: useIosChrome,
+                secondary: const Icon(Icons.dns_outlined),
+                title: 'Use localhost',
+                subtitle: isAndroid()
+                    ? 'Connect to local server via 10.0.2.2:3000'
+                    : 'Connect to local development server',
+                value: storage.useLocalhost,
+                onChanged: (value) {
+                  unawaited(storage.setUseLocalhost(value));
+                  setState(() {});
+                },
+              ),
             if (!kReleaseMode)
               ListTile(
                 leading: const Icon(Icons.science_outlined),
