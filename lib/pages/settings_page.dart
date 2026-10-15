@@ -3,7 +3,6 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:techpie/services/auth_service.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -45,6 +44,7 @@ class _SettingsPageState extends State<SettingsPage> {
   String _appVersion = '';
   bool _checkingUpdate = false;
   bool? _isPersonalInfoBlurred;
+  bool _wasVisible = false;
 
   /// The stack a settings subpage is pushed onto in a wide window. A field, not
   /// a local: a GlobalKey rebuilt every frame would drop the stack with it.
@@ -59,12 +59,16 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _isPersonalInfoBlurred ??=
-        ServiceProvider.of(context).storageService.maskPersonalInfo;
+    // ignore: deprecated_member_use
+    final isVisible = TickerMode.of(context);
+    if (isVisible && !_wasVisible) {
+      _isPersonalInfoBlurred =
+          ServiceProvider.of(context).storageService.maskPersonalInfo;
+    }
+    _wasVisible = isVisible;
   }
 
   void _togglePersonalInfoBlur() {
-    unawaited(HapticFeedback.lightImpact());
     setState(() {
       _isPersonalInfoBlurred = !(_isPersonalInfoBlurred ?? true);
     });
@@ -199,61 +203,47 @@ class _SettingsPageState extends State<SettingsPage> {
               // Account section
               _sectionHeader(theme, 'Account'),
               if (session != null) ...[
-              TweenAnimationBuilder<double>(
-                tween: Tween<double>(
-                  begin: (_isPersonalInfoBlurred ?? true) ? 8.0 : 0.0,
-                  end: (_isPersonalInfoBlurred ?? true) ? 8.0 : 0.0,
-                ),
-                duration: const Duration(milliseconds: 50),
-                builder: (context, blurSigma, _) {
-                  Widget wrapBlur(Widget child) {
-                    if (blurSigma <= 0.01) return child;
-                    return ImageFiltered(
-                      imageFilter: ImageFilter.blur(
-                        sigmaX: blurSigma,
-                        sigmaY: blurSigma,
+                Semantics(
+                  button: true,
+                  label: (_isPersonalInfoBlurred ?? true)
+                      ? 'Personal info hidden, tap to show'
+                      : 'Personal info shown, tap to hide',
+                  child: ListTile(
+                    leading: const Icon(Icons.person),
+                    title: ImageFiltered(
+                      imageFilter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                      enabled: _isPersonalInfoBlurred ?? true,
+                      child: Text(
+                        session.userName.isNotEmpty
+                            ? session.userName
+                            : session.userId,
                       ),
-                      child: child,
-                    );
-                  }
-
-                  final isBlurred = _isPersonalInfoBlurred ?? true;
-                  return Semantics(
-                    button: true,
-                    label: isBlurred ? '个人信息已隐藏，点击显示' : '个人信息已显示，点击隐藏',
-                    child: ListTile(
-                      leading: wrapBlur(const Icon(Icons.person)),
-                      title: wrapBlur(
-                        Text(
-                          session.userName.isNotEmpty
-                              ? session.userName
-                              : session.userId,
-                        ),
-                      ),
-                      subtitle: wrapBlur(
-                        Text(
-                          [
-                            'GeekPie Uni-Auth',
-                            if (session.userId.isNotEmpty)
-                              session.userId,
-                          ].join(' · '),
-                        ),
-                      ),
-                      trailing: IconButton(
-                        icon: Icon(
-                          isBlurred
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
-                        ),
-                        tooltip: isBlurred ? '显示个人信息' : '隐藏个人信息',
-                        onPressed: _togglePersonalInfoBlur,
-                      ),
-                      onTap: _togglePersonalInfoBlur,
                     ),
-                  );
-                },
-              ),
-            ],
+                    subtitle: ImageFiltered(
+                      imageFilter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                      enabled: _isPersonalInfoBlurred ?? true,
+                      child: Text(
+                        [
+                          'GeekPie Uni-Auth',
+                          if (session.userId.isNotEmpty) session.userId,
+                        ].join(' · '),
+                      ),
+                    ),
+                    trailing: IconButton(
+                      icon: Icon(
+                        (_isPersonalInfoBlurred ?? true)
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                      ),
+                      tooltip: (_isPersonalInfoBlurred ?? true)
+                          ? 'Show personal info'
+                          : 'Hide personal info',
+                      onPressed: _togglePersonalInfoBlur,
+                    ),
+                    onTap: _togglePersonalInfoBlur,
+                  ),
+                ),
+              ],
             if (auth.isLoggedIn) ...[
               ListTile(
                 leading: const Icon(Icons.cloud_sync_outlined),
@@ -408,8 +398,8 @@ class _SettingsPageState extends State<SettingsPage> {
             _AdaptiveSwitchTile(
               usesIosLiquidGlass: useIosChrome,
               secondary: const Icon(Icons.visibility_off_outlined),
-              title: '默认隐藏个人信息',
-              subtitle: '进入设置页时自动模糊个人信息，防止截图泄露',
+              title: 'Mask personal info',
+              subtitle: 'Blur sensitive profile details by default',
               value: storage.maskPersonalInfo,
               onChanged: (value) {
                 unawaited(storage.setMaskPersonalInfo(value));
