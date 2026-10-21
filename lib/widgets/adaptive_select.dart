@@ -81,7 +81,7 @@ class AdaptiveSelect extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
         ),
         child: CupertinoButton(
-          minimumSize: const Size.square(iosMinimumInteractiveDimension),
+          minSize: iosMinimumInteractiveDimension,
           padding: const EdgeInsetsDirectional.fromSTEB(12, 0, 10, 0),
           borderRadius: BorderRadius.circular(10),
           onPressed: options.isEmpty ? null : () async => _showOptions(context),
