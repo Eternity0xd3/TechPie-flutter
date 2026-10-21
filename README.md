@@ -83,7 +83,7 @@ export HOS_SDK_HOME="$HOME/dev/command-line-tools/sdk"
 
 ### HarmonyOS
 
-- Flutter (OHOS patch) 3.27.5-ohos-1.0.5
+- Flutter (OHOS patch) 3.35.8-ohos-1.0.4
 - [Huawei Command Tools  6.1.1 Beta1](https://developer.huawei.com/consumer/cn/download/command-line-tools-for-hmos)
 
 ## Release & Versioning
